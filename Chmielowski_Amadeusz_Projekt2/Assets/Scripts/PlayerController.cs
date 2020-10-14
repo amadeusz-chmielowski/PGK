@@ -39,5 +39,11 @@ public class PlayerController : MonoBehaviour
         {
             transform.position = new Vector3(-13.3f, -1.88f, 0f);
         }
+        
+        if(transform.rotation.z < -0.01f || transform.rotation.z > 0.01f)
+        {
+            Debug.LogWarning(transform.rotation.z);
+            transform.rotation = new Quaternion(0, 0, 0, transform.rotation.w);
+        }
     }
 }
