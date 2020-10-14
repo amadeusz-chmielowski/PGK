@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -15,6 +17,10 @@ public class PlayerController : MonoBehaviour
     private int money = 0;
     private int eur = 0;
     private int gbp = 0;
+    private int coins_left;
+    public GameObject text;
+    private GameObject[] coinsEUR;
+    private GameObject[] coinsGBP;
 
     void Awake()
     {
@@ -25,6 +31,10 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         isFacingRight = true;
+        coinsEUR = GameObject.FindGameObjectsWithTag("CoinEUR");
+        coinsGBP = GameObject.FindGameObjectsWithTag("CoinGBP");
+        coins_left = coinsEUR.Length + coinsGBP.Length;
+        text.GetComponent<Text>().text = string.Format("Coin: {0} | Small: {1} | Big: {2} | Coins left: {3}", money, eur, gbp, coins_left);
     }
 
     // Update is called once per frame
@@ -104,18 +114,28 @@ public class PlayerController : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
+        Debug.Log(other.tag);
         Debug.Log("GameObject1 collided with " + other.name);
         if (other.CompareTag("CoinEUR"))
         {
             money += 1;
             eur += 1;
+            coins_left -= 1;
             other.gameObject.SetActive(false);
+            text.GetComponent<Text>().text = string.Format("Coin: {0} | Small: {1} | Big: {2} | Coins left: {3}", money, eur, gbp, coins_left);
         }
         else if (other.CompareTag("CoinGBP"))
         {
             money += 1;
             gbp += 1;
+            coins_left -= 1;
             other.gameObject.SetActive(false);
+            text.GetComponent<Text>().text = string.Format("Coin: {0} | Small: {1} | Big: {2} | Coins left: {3}", money, eur, gbp, coins_left);
+        }
+        else if (other.CompareTag("Finish"))
+        {
+            Thread.Sleep(10000);
+            transform.position = new Vector3(-13.3f, -1.88f, 0f);
         }
     }
 }
