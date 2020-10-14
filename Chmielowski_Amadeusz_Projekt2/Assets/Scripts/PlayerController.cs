@@ -34,5 +34,10 @@ public class PlayerController : MonoBehaviour
         {
             rigidbody.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
         }
+
+        if(transform.position.y < -10)
+        {
+            transform.position = new Vector3(-13.3f, -1.88f, 0f);
+        }
     }
 }
