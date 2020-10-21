@@ -1,115 +1,237 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using UnityEngine;
+using System.Collections;
 using System.Threading;
-using UnityEngine;
 using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
-    public float movmentSpeed = 4.0f;
-    public float jumpForce = 6.0f;
-    private Rigidbody2D rigidBody;
-    public LayerMask groundLayer;
-    private bool firstJump = false;
-    public Animator animationOfPlayer;
-    private bool isWalking = false;
-    private bool isFacingRight;
+
+    [SerializeField] float m_speed = 4.0f;
+    [SerializeField] float m_jumpForce = 7.5f;
+    [SerializeField] float m_rollForce = 6.0f;
+    [SerializeField] bool m_noBlood = false;
+    [SerializeField] GameObject m_slideDust;
+
+    private Animator m_animator;
+    private Rigidbody2D m_body2d;
+    private Sensor_HeroKnight m_groundSensor;
+    private Sensor_HeroKnight m_wallSensorR1;
+    private Sensor_HeroKnight m_wallSensorR2;
+    private Sensor_HeroKnight m_wallSensorL1;
+    private Sensor_HeroKnight m_wallSensorL2;
+    private bool m_grounded = false;
+    private bool m_rolling = false;
+    private int m_facingDirection = 1;
+    private int m_currentAttack = 0;
+    private float m_timeSinceAttack = 0.0f;
+    private float m_delayToIdle = 0.0f;
     private int money = 0;
     private int eur = 0;
     private int gbp = 0;
     private int coins_left;
+    public int lives = 5;
+    public float killOffset = 0.2f;
+    private int number_of_keys = 0;
+    private int number_of_keys_left = 0;
     public GameObject text;
     private GameObject[] coinsEUR;
     private GameObject[] coinsGBP;
+    private GameObject start;
+    public bool doubleJumpOn = true;
+    private bool firstJump = false;
 
-    void Awake()
-    {
-        rigidBody = GetComponent<Rigidbody2D>();
-    }
 
-    // Start is called before the first frame update
+    // Use this for initialization
     void Start()
     {
-        isFacingRight = true;
+        m_animator = GetComponent<Animator>();
+        m_body2d = GetComponent<Rigidbody2D>();
+        m_groundSensor = transform.Find("GroundSensor").GetComponent<Sensor_HeroKnight>();
+        m_wallSensorR1 = transform.Find("WallSensor_R1").GetComponent<Sensor_HeroKnight>();
+        m_wallSensorR2 = transform.Find("WallSensor_R2").GetComponent<Sensor_HeroKnight>();
+        m_wallSensorL1 = transform.Find("WallSensor_L1").GetComponent<Sensor_HeroKnight>();
+        m_wallSensorL2 = transform.Find("WallSensor_L2").GetComponent<Sensor_HeroKnight>();
         coinsEUR = GameObject.FindGameObjectsWithTag("CoinEUR");
         coinsGBP = GameObject.FindGameObjectsWithTag("CoinGBP");
+        start = GameObject.FindGameObjectsWithTag("Respawn")[0];
         coins_left = coinsEUR.Length + coinsGBP.Length;
+        number_of_keys_left = GameObject.FindGameObjectsWithTag("Box").Length;
+        text = GameObject.FindGameObjectsWithTag("MoneyStatus")[0];
         text.GetComponent<Text>().text = string.Format("Coin: {0} | Small: {1} | Big: {2} | Coins left: {3}", money, eur, gbp, coins_left);
     }
 
     // Update is called once per frame
     void Update()
     {
-        isWalking = false;
-        animationOfPlayer.SetBool("isGrounded", IsGrounded());
-        if (Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D))
+        // Increase timer that controls attack combo
+        m_timeSinceAttack += Time.deltaTime;
+
+        //Check if character just landed on the ground
+        if (!m_grounded && m_groundSensor.State())
         {
-            if (!isFacingRight)
+            m_grounded = true;
+            m_animator.SetBool("Grounded", m_grounded);
+        }
+
+        //Check if character just started falling
+        if (m_grounded && !m_groundSensor.State())
+        {
+            m_grounded = false;
+            m_animator.SetBool("Grounded", m_grounded);
+        }
+
+        // -- Handle input and movement --
+        float inputX = Input.GetAxis("Horizontal");
+
+        // Swap direction of sprite depending on walk direction
+        if (inputX > 0)
+        {
+            GetComponent<SpriteRenderer>().flipX = false;
+            m_facingDirection = 1;
+        }
+
+        else if (inputX < 0)
+        {
+            GetComponent<SpriteRenderer>().flipX = true;
+            m_facingDirection = -1;
+        }
+
+        // Move
+        if (!m_rolling)
+            m_body2d.velocity = new Vector2(inputX * m_speed, m_body2d.velocity.y);
+
+        //Set AirSpeed in animator
+        m_animator.SetFloat("AirSpeedY", m_body2d.velocity.y);
+
+        // -- Handle Animations --
+        //Wall Slide
+        m_animator.SetBool("WallSlide", (m_wallSensorR1.State() && m_wallSensorR2.State()) || (m_wallSensorL1.State() && m_wallSensorL2.State()));
+
+        //Death
+        if (Input.GetKeyDown("e"))
+        {
+            m_animator.SetBool("noBlood", m_noBlood);
+            m_animator.SetTrigger("Death");
+        }
+
+        //Hurt
+        else if (Input.GetKeyDown("q"))
+            m_animator.SetTrigger("Hurt");
+
+        //Attack
+        else if (Input.GetMouseButtonDown(0) && m_timeSinceAttack > 0.25f)
+        {
+            m_currentAttack++;
+
+            // Loop back to one after third attack
+            if (m_currentAttack > 3)
+                m_currentAttack = 1;
+
+            // Reset Attack combo if time since last attack is too large
+            if (m_timeSinceAttack > 1.0f)
+                m_currentAttack = 1;
+
+            // Call one of three attack animations "Attack1", "Attack2", "Attack3"
+            m_animator.SetTrigger("Attack" + m_currentAttack);
+
+            // Reset timer
+            m_timeSinceAttack = 0.0f;
+        }
+
+        // Block
+        else if (Input.GetMouseButtonDown(1))
+        {
+            m_animator.SetTrigger("Block");
+            m_animator.SetBool("IdleBlock", true);
+        }
+
+        else if (Input.GetMouseButtonUp(1))
+            m_animator.SetBool("IdleBlock", false);
+
+        // Roll
+        else if (Input.GetKeyDown("left shift") && !m_rolling)
+        {
+            m_rolling = true;
+            m_animator.SetTrigger("Roll");
+            m_body2d.velocity = new Vector2(m_facingDirection * m_rollForce, m_body2d.velocity.y);
+        }
+
+
+        //Jump
+        else if (Input.GetKeyDown("space"))
+        {
+            Debug.Log("Trying to jump, grounded : " + m_grounded + "firstJump: " + firstJump + "doubleJumpOn: " + doubleJumpOn);
+            if (m_grounded)
             {
-                Flip();
+                m_animator.SetTrigger("Jump");
+                m_grounded = false;
+                m_animator.SetBool("Grounded", m_grounded);
+                m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
+                m_groundSensor.Disable(0.2f);
+                firstJump = true;
             }
-            transform.Translate(movmentSpeed * Time.deltaTime, 0.0f, 0.0f, Space.World);
-            isWalking = true;
-        }
-        else if (Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
-        {
-            if (isFacingRight)
+            else if (firstJump && !m_grounded && doubleJumpOn)
             {
-                Flip();
+                m_animator.SetTrigger("Jump");
+                m_grounded = false;
+                m_animator.SetBool("Grounded", m_grounded);
+                m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
+                m_groundSensor.Disable(0.2f);
+                firstJump = false;
             }
-            transform.Translate(-movmentSpeed * Time.deltaTime, 0.0f, 0.0f, Space.World);
-            isWalking = true;
-        }
-        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKey(KeyCode.W))
-        {
-            Jump();
-        }
-        animationOfPlayer.SetBool("isGrounded", IsGrounded());
-        animationOfPlayer.SetBool("isWalking", isWalking);
+            Debug.Log(string.Format("Not enought keys to finish the level, keys: {0} keys_left: {1}", number_of_keys, number_of_keys_left));
 
-        if(transform.position.y < -10)
-        {
-            transform.position = new Vector3(-13.3f, -1.88f, 0f);
         }
-        
-        if(transform.rotation.z < -0.01f || transform.rotation.z > 0.01f)
-        {
-            //Debug.LogWarning(transform.rotation.z);
-            transform.rotation = new Quaternion(0, 0, 0, transform.rotation.w);
-        }
-        animationOfPlayer.SetBool("isGrounded", IsGrounded());
-        animationOfPlayer.SetBool("isWalking", isWalking);
-    }
 
-    bool IsGrounded()
-    {
-        return Physics2D.Raycast(this.transform.position, Vector2.down, 0.8f, groundLayer.value);
-    }
-
-    void Jump()
-    {
-        if (IsGrounded())
+        //Run
+        else if (Mathf.Abs(inputX) > Mathf.Epsilon)
         {
-            rigidBody.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            firstJump = true;
-            isWalking = false;
-            animationOfPlayer.SetBool("isJumping", true);
+            // Reset timer
+            m_delayToIdle = 0.05f;
+            m_animator.SetInteger("AnimState", 1);
         }
-        if (firstJump && !IsGrounded())
+
+        //Idle
+        else
         {
-            rigidBody.AddForce(Vector2.up * jumpForce * 0.7f, ForceMode2D.Impulse);
-            firstJump = false;
-            isWalking = false;
-            animationOfPlayer.SetBool("isJumping", true);
+            // Prevents flickering transitions to idle
+            m_delayToIdle -= Time.deltaTime;
+            if (m_delayToIdle < 0)
+                m_animator.SetInteger("AnimState", 0);
+        }
+
+        //Fall of map
+        if (transform.position.y < -10)
+        {
+            transform.position = start.transform.position;
+            lives--;
         }
     }
 
-    void Flip()
+    // Animation Events
+    // Called in end of roll animation.
+    void AE_ResetRoll()
     {
-        isFacingRight = !isFacingRight;
-        Vector3 theScale = transform.localScale;
-        theScale.x *= -1;
-        transform.localScale = theScale;
+        m_rolling = false;
+    }
+
+    // Called in slide animation.
+    void AE_SlideDust()
+    {
+        Vector3 spawnPosition;
+
+        if (m_facingDirection == 1)
+            spawnPosition = m_wallSensorR2.transform.position;
+        else
+            spawnPosition = m_wallSensorL2.transform.position;
+
+        if (m_slideDust != null)
+        {
+            // Set correct arrow spawn position
+            GameObject dust = Instantiate(m_slideDust, spawnPosition, gameObject.transform.localRotation) as GameObject;
+            // Turn arrow in correct direction
+            dust.transform.localScale = new Vector3(m_facingDirection, 1, 1);
+        }
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -118,24 +240,65 @@ public class PlayerController : MonoBehaviour
         Debug.Log("GameObject1 collided with " + other.name);
         if (other.CompareTag("CoinEUR"))
         {
+            other.gameObject.SetActive(false);
             money += 1;
             eur += 1;
             coins_left -= 1;
-            other.gameObject.SetActive(false);
+
             text.GetComponent<Text>().text = string.Format("Coin: {0} | Small: {1} | Big: {2} | Coins left: {3}", money, eur, gbp, coins_left);
         }
         else if (other.CompareTag("CoinGBP"))
         {
+            other.gameObject.SetActive(false);
             money += 1;
             gbp += 1;
             coins_left -= 1;
-            other.gameObject.SetActive(false);
+
+            Debug.LogWarning(text);
             text.GetComponent<Text>().text = string.Format("Coin: {0} | Small: {1} | Big: {2} | Coins left: {3}", money, eur, gbp, coins_left);
         }
         else if (other.CompareTag("Finish"))
         {
-            Thread.Sleep(10000);
-            transform.position = new Vector3(-13.3f, -1.88f, 0f);
+            if (number_of_keys_left == 0)
+            {
+                text.GetComponent<Text>().text = string.Format("You have finished the level");
+                Thread.Sleep(10000);
+
+                transform.position = start.transform.position;
+            }
+            else
+            {
+                text.GetComponent<Text>().text = string.Format("Not enought keys to finish the level, keys: {0} keys_left: {1}", number_of_keys, number_of_keys_left);
+            }
+
+
+        }
+        else if (other.CompareTag("Enemy"))
+        {
+            if (other.gameObject.transform.position.y + killOffset < this.transform.position.y)
+            {
+                Debug.Log("Killed an enemy!");
+            }
+            else if (other.gameObject.transform.position.y + killOffset > this.transform.position.y)
+            {
+                lives--;
+                Debug.Log("Player’s hurt");
+                if (lives <= 0)
+                    Debug.Log("GameOver");
+                transform.position = start.transform.position;
+            }
+
+        }
+        else if (other.CompareTag("Heart"))
+        {
+            lives++;
+            other.gameObject.SetActive(false);
+        }
+        else if (other.CompareTag("Box"))
+        {
+            number_of_keys++;
+            number_of_keys_left--;
+            other.gameObject.SetActive(false);
         }
     }
 }
