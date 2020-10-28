@@ -63,7 +63,10 @@
      <Compile Include="Assets\Scripts\GameManager.cs" />
      <Compile Include="Assets\Hero Knight - Pixel Art\ColorSwap\ColorSwap_HeroKnight.cs" />
      <Compile Include="Assets\Scripts\MainMenu.cs" />
+     <Compile Include="Assets\Scripts\MovingPlatformController.cs" />
+     <Compile Include="Assets\Scripts\LiftController.cs" />
      <None Include="Assets\Free Poker Chip Icons\Please Read.txt" />
+     <None Include="Assets\Pixel Font - Tripfive\_README.txt" />
      <None Include="Assets\Hero Knight - Pixel Art\ColorSwap\Sprites-ColorSwap.shader" />
  <Reference Include="Unity.Timeline.Editor">
  <HintPath>C:/Users/amade/Desktop/PG/Semestr7/PGK/Chmielowski_Amadeusz_Projekt2/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>

@@ -10,6 +10,7 @@ TagManager:
   - Enemy
   - Heart
   - Box
+  - Lift
   layers:
   - Default
   - TransparentFX

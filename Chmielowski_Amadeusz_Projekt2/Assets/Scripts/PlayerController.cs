@@ -75,6 +75,11 @@ public class PlayerController : MonoBehaviour
             // -- Handle input and movement --
             float inputX = Input.GetAxis("Horizontal");
 
+            if(inputX != 0 && transform.parent != null)
+            {
+                Unlock();
+            }
+
             // Swap direction of sprite depending on walk direction
             if (inputX > 0)
             {
@@ -152,6 +157,10 @@ public class PlayerController : MonoBehaviour
             //Jump
             else if (Input.GetKeyDown("space"))
             {
+                if(transform.parent != null)
+                {
+                    Unlock();
+                }
                 Debug.Log("Trying to jump, grounded : " + m_grounded + "firstJump: " + firstJump + "doubleJumpOn: " + doubleJumpOn);
                 if (m_grounded)
                 {
@@ -246,10 +255,6 @@ public class PlayerController : MonoBehaviour
             if (GameManager.instance.Number_of_keys_left == GameManager.instance.Number_of_keys)
             {
                 GameManager.instance.End(true);
-                Thread.Sleep(1000);
-                //GameManager.instance.End(false);
-
-                transform.position = start.transform.position;
             }
             else
             {
@@ -285,5 +290,28 @@ public class PlayerController : MonoBehaviour
             GameManager.instance.AddKey();
 
         }
+    }
+
+    void OnTriggerStay2D(Collider2D other)
+    {
+        if (other.CompareTag("Lift"))
+        {
+            m_body2d.isKinematic = true;
+            transform.parent = other.transform;
+        }
+    }
+
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Lift"))
+        {
+            Unlock();
+        }
+    }
+
+    void Unlock()
+    {
+        m_body2d.isKinematic = false;
+        transform.parent = null;
     }
 }
