@@ -175,7 +175,7 @@ public class EnemyController : MonoBehaviour
             if (other.CompareTag("Player"))
             {
                 if (other.gameObject.transform.position.y >
-                this.transform.position.y + killOffset)
+                this.transform.position.y + killOffset * 2)
                 {
                     Debug.Log("Enemy dead");
                     m_animator.SetBool("isDead", true);
