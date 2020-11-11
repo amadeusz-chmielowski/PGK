@@ -3,6 +3,7 @@ using System.Collections;
 using System.Threading;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(AudioSource))]
 public class PlayerController : MonoBehaviour
 {
 
@@ -27,11 +28,17 @@ public class PlayerController : MonoBehaviour
     private float m_delayToIdle = 0.0f;
 
     public float killOffset = 0.2f;
+    public AudioClip coinSound;
+    public AudioClip jumpSound;
+    public AudioClip heartSound;
+    public AudioClip hitSound;
+    private AudioSource audioSource;
 
 
     private GameObject start;
     public bool doubleJumpOn = true;
     private bool firstJump = false;
+    bool respawnAvailable = true;
 
 
     // Use this for initialization
@@ -45,7 +52,20 @@ public class PlayerController : MonoBehaviour
         m_wallSensorL1 = transform.Find("WallSensor_L1").GetComponent<Sensor_HeroKnight>();
         m_wallSensorL2 = transform.Find("WallSensor_L2").GetComponent<Sensor_HeroKnight>();
 
-        start = GameObject.FindGameObjectsWithTag("Respawn")[0];
+        try
+        {
+            start = GameObject.FindGameObjectsWithTag("Respawn")[0];
+        }
+        catch
+        {
+            respawnAvailable = false;
+        }
+
+    }
+
+    void Awake()
+    {
+        audioSource = GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
@@ -170,6 +190,7 @@ public class PlayerController : MonoBehaviour
                     m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
                     m_groundSensor.Disable(0.2f);
                     firstJump = true;
+                    audioSource.PlayOneShot(jumpSound, 1.0f);
                 }
                 else if (firstJump && !m_grounded && doubleJumpOn)
                 {
@@ -179,6 +200,7 @@ public class PlayerController : MonoBehaviour
                     m_body2d.velocity = new Vector2(m_body2d.velocity.x, m_jumpForce);
                     m_groundSensor.Disable(0.2f);
                     firstJump = false;
+                    audioSource.PlayOneShot(jumpSound, 1.0f);
                 }
             }
 
@@ -202,8 +224,18 @@ public class PlayerController : MonoBehaviour
             //Fall of map
             if (transform.position.y < -10)
             {
-                transform.position = start.transform.position;
-                GameManager.instance.TakeLife();
+                if (respawnAvailable)
+                {
+                    transform.position = start.transform.position;
+                    GameManager.instance.TakeLife();
+                    audioSource.PlayOneShot(hitSound, 1.0f);
+                }
+                else
+                {
+                    var lives_to_take = GameManager.instance.Lives_number;
+                    GameManager.instance.RestartGame(lives_to_take--);
+                    audioSource.PlayOneShot(hitSound, 1.0f);
+                }
             }
         }
     }
@@ -242,12 +274,14 @@ public class PlayerController : MonoBehaviour
         {
             other.gameObject.SetActive(false);
             GameManager.instance.AddCoin(1);
+            audioSource.PlayOneShot(coinSound, 1.0f);
 
         }
         if (other.CompareTag("CoinGBP") && this.CompareTag("Player"))
         {
             other.gameObject.SetActive(false);
             GameManager.instance.AddCoin(1);
+            audioSource.PlayOneShot(coinSound, 1.0f);
 
         }
         if (other.CompareTag("Finish") && this.CompareTag("Player"))
@@ -272,15 +306,27 @@ public class PlayerController : MonoBehaviour
             }
             if (other.gameObject.transform.position.y + killOffset > this.transform.position.y)
             {
-                GameManager.instance.TakeLife();
+
                 Debug.Log("Player’s hurt");
-                transform.position = start.transform.position;
+                if (respawnAvailable)
+                {
+                    GameManager.instance.TakeLife();
+                    transform.position = start.transform.position;
+                    audioSource.PlayOneShot(hitSound, 1.0f);
+                }
+                else
+                {
+                    audioSource.PlayOneShot(hitSound, 1.0f);
+                    GameManager.instance.RestartGame();
+                    GameManager.instance.TakeLife();
+                }
             }
 
         }
         if (other.CompareTag("Heart") && this.CompareTag("Player"))
         {
             other.gameObject.SetActive(false);
+            audioSource.PlayOneShot(heartSound, 1.0f);
             GameManager.instance.AddLive();
 
         }

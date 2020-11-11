@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Threading;
 
 public class GameManager : MonoBehaviour
 {
@@ -42,23 +43,27 @@ public class GameManager : MonoBehaviour
     public Image special;
     public Text notYet;
     public Text timerText;
-    private float seconds =0;
+    private float seconds = 0;
     private float minutes = 0;
     private float timer = 0;
+    public AudioClip gameOverSound;
+    private AudioSource audioSource;
 
     private bool gameFullyCompleted = false;
     private string next_level_name = "";
 
     public int Number_of_keys_left { get => number_of_keys_left; set => number_of_keys_left = value; }
     public int Number_of_keys { get => number_of_keys; set => number_of_keys = value; }
+    public int Lives_number { get => lives_number; set => lives_number = value; }
 
     void Awake()
     {
         instance = this;
+        audioSource = GetComponent<AudioSource>();
         InGame();
         coinsEUR = GameObject.FindGameObjectsWithTag("CoinEUR");
         coinsGBP = GameObject.FindGameObjectsWithTag("CoinGBP");
-        scenesNumber = SceneManager.sceneCountInBuildSettings -1;
+        scenesNumber = SceneManager.sceneCountInBuildSettings - 1;
         coins_left = coinsEUR.Length + coinsGBP.Length;
         number_of_keys_left = GameObject.FindGameObjectsWithTag("Box").Length;
         coinText.text = string.Format("{0}", money);
@@ -76,7 +81,7 @@ public class GameManager : MonoBehaviour
         minutes = 0;
         seconds = 0;
         timerText.text = string.Format("czas: {0:00}:{1:00}", minutes, seconds);
-        GetNextLevel(); 
+        GetNextLevel();
     }
 
     void GetNextLevel()
@@ -90,7 +95,7 @@ public class GameManager : MonoBehaviour
         {
             gameFullyCompleted = true;
             //toDo canvas for gameCompleted
-            
+
         }
         else
         {
@@ -115,16 +120,23 @@ public class GameManager : MonoBehaviour
     }
     public void GameOver()
     {
+        audioSource.PlayOneShot(gameOverSound, 1.0f);
         SetGameState(GameState.GS_GAME_OVER);
     }
     public void PauseMenu()
     {
         SetGameState(GameState.GS_PAUSEMENU);
     }
+
+    public void RestartGame(int lives_to_take = 0)
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
     public void LevelCompleted()
     {
         //save to file
         string path = SceneManager.GetActiveScene().name + ".stats";
+        string path2 = SceneManager.GetActiveScene().name + ".high";
         if (!File.Exists(path))
         {
             using (StreamWriter sw = File.CreateText(path))
@@ -146,7 +158,77 @@ public class GameManager : MonoBehaviour
                 sw.WriteLine("Time: " + string.Format("{0:00}:{1:00}", minutes, seconds));
             }
         }
+
+        if (!File.Exists(path2))
+        {
+            using (StreamWriter sw = File.CreateText(path2))
+            {
+                sw.WriteLine("Coins: " + money);
+                sw.WriteLine("Killed: " + killedEnemies);
+                sw.WriteLine("Heart: " + lives_number);
+                sw.WriteLine("Time: " + string.Format("{0:00}:{1:00}", minutes, seconds));
+            }
+        }
+        else
+        {
+            HightScore lastHighScore = LoadLevelHighScore();
+            var lastScore = CalculateScore(lastHighScore);
+            HightScore thisScore = new HightScore();
+            thisScore.coins = money;
+            thisScore.kills = killedEnemies;
+            thisScore.hearts = lives_number;
+            thisScore.time = string.Format("{0:00}:{1:00}", minutes, seconds);
+            var thisScoreNr = CalculateScore(thisScore);
+            if(thisScoreNr > lastScore)
+            {
+                File.Delete(path2);
+                using (StreamWriter sw = File.CreateText(path2))
+                {
+                    sw.WriteLine("Coins: " + money);
+                    sw.WriteLine("Killed: " + killedEnemies);
+                    sw.WriteLine("Heart: " + lives_number);
+                    sw.WriteLine("Time: " + string.Format("{0:00}:{1:00}", minutes, seconds));
+                }
+            }
+        }
         SetGameState(GameState.GS_LEVELCOMPLETED);
+    }
+
+    public struct HightScore
+    {
+        public int coins;
+        public int kills;
+        public int hearts;
+        public string time;
+    }
+
+    public int CalculateScore(HightScore hightScore)
+    {
+        int score = 0;
+        score = 5 * ((1 + hightScore.coins) * (1 + hightScore.kills) * (1 + hightScore.hearts)) - ((360 * Convert.ToInt32(hightScore.time.Split(':')[0])) + (1 * Convert.ToInt32(hightScore.time.Split(':')[1])));
+        return score;
+    }
+
+    public HightScore LoadLevelHighScore()
+    {
+        string path = SceneManager.GetActiveScene().name + ".high";
+        HightScore hightScore = new HightScore();
+        hightScore.coins = 0;
+        hightScore.kills = 0;
+        hightScore.hearts = 0;
+        hightScore.time = "00:00";
+
+        if (File.Exists(path))
+        {
+            using (StreamReader sr = File.OpenText(path))
+            {
+                hightScore.coins = Convert.ToInt32(sr.ReadLine().Split(' ')[1]);
+                hightScore.kills = Convert.ToInt32(sr.ReadLine().Split(' ')[1]);
+                hightScore.hearts = Convert.ToInt32(sr.ReadLine().Split(' ')[1]);
+                hightScore.time = sr.ReadLine().Split(' ')[1];
+            }
+        }
+        return hightScore;
     }
 
     // Start is called before the first frame update
@@ -157,11 +239,11 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.Escape) && currentGameState == GameState.GS_PAUSEMENU)
+        if (Input.GetKeyDown(KeyCode.Escape) && currentGameState == GameState.GS_PAUSEMENU)
         {
             InGame();
         }
-        else if(Input.GetKeyDown(KeyCode.Escape) && currentGameState == GameState.GS_GAME)
+        else if (Input.GetKeyDown(KeyCode.Escape) && currentGameState == GameState.GS_GAME)
         {
             PauseMenu();
         }
@@ -174,7 +256,7 @@ public class GameManager : MonoBehaviour
 
     public void OnRestartButtonClicked()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        RestartGame();
     }
 
     public void OnExitButtonClicked()
@@ -208,7 +290,7 @@ public class GameManager : MonoBehaviour
 
     public void AddLive()
     {
-        if(lives_number == 4)
+        if (lives_number == 4)
         {
             return;
         }
@@ -240,7 +322,7 @@ public class GameManager : MonoBehaviour
             {
                 special.color = Color.gray;
             }
-            else if(lives_number < 3)
+            else if (lives_number < 3)
             {
                 lives[lives_number].enabled = false;
             }
@@ -259,14 +341,14 @@ public class GameManager : MonoBehaviour
 
     public void AddToTime(float sec)
     {
-        if(timer < 1.0f)
+        if (timer < 1.0f)
         {
             timer += sec;
         }
         else
         {
             timer = 0;
-            if(seconds < 59)
+            if (seconds < 59)
             {
                 seconds += 1;
             }

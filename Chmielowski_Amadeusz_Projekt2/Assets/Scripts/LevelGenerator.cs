@@ -13,14 +13,33 @@ public class LevelGenerator : MonoBehaviour
     public List<LevelPieceBasic> levelPrefabs = new List<LevelPieceBasic>();
     public List<LevelPieceBasic> pieces = new List<LevelPieceBasic>();
     public LevelPieceBasic finish;
+    public LevelPieceBasic start;
     private bool FinishGenerated = false;
     private int GeneratedLevels = 0;
     // Start is called before the first frame update
     void Start()
     {
         instance = this;
+        ShowPiece((LevelPieceBasic)Instantiate(start));
         AddPiece();
         AddPiece();
+    }
+
+    private void ShowPiece(LevelPieceBasic piece)
+    {
+        piece.transform.SetParent(this.transform, false);
+        if (pieces.Count < 1)
+            piece.transform.position = new Vector2(
+            levelStartPoint.position.x - piece.startPoint.localPosition.x,
+            levelStartPoint.position.y - piece.startPoint.localPosition.y);
+        else
+            piece.transform.position = new Vector2(
+            pieces[pieces.Count - 1].exitPoint.position.x - pieces[pieces.Count - 1].
+            startPoint.localPosition.x,
+            pieces[pieces.Count - 1].exitPoint.position.y - pieces[pieces.Count - 1].
+            startPoint.localPosition.y);
+        pieces.Add(piece);
+        GeneratedLevels++;
     }
 
     // Update is called once per frame
@@ -31,35 +50,19 @@ public class LevelGenerator : MonoBehaviour
             int randomIndex = UnityEngine.Random.Range(0, levelPrefabs.Count);
             Debug.LogError(randomIndex + " | " + Convert.ToString(levelPrefabs.Count));
             LevelPieceBasic piece = (LevelPieceBasic)Instantiate(levelPrefabs[randomIndex]);
-            piece.transform.SetParent(this.transform, false);
-            if (pieces.Count < 1)
-                piece.transform.position = new Vector2(
-                levelStartPoint.position.x - piece.startPoint.localPosition.x,
-                levelStartPoint.position.y - piece.startPoint.localPosition.y);
-            else
-                piece.transform.position = new Vector2(
-                pieces[pieces.Count - 1].exitPoint.position.x - pieces[pieces.Count - 1].
-                startPoint.localPosition.x,
-                pieces[pieces.Count - 1].exitPoint.position.y - pieces[pieces.Count - 1].
-                startPoint.localPosition.y);
-            pieces.Add(piece);
+            ShowPiece(piece);
+
         }
         else
         {
             if (!FinishGenerated)
             {
                 LevelPieceBasic piece = (LevelPieceBasic)Instantiate(finish);
-                piece.transform.SetParent(this.transform, false);
-                piece.transform.position = new Vector2(
-                pieces[pieces.Count - 1].exitPoint.position.x - pieces[pieces.Count - 1].
-                startPoint.localPosition.x,
-                pieces[pieces.Count - 1].exitPoint.position.y - pieces[pieces.Count - 1].
-                startPoint.localPosition.y);
-                pieces.Add(piece);
+                ShowPiece(piece);
+                FinishGenerated = true;
             }
 
         }
-        GeneratedLevels++;
     }
 
     public void RemoveOldestPiece()
