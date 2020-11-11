@@ -48,7 +48,7 @@ public class EnemyController : MonoBehaviour
     void Awake()
     {
         startingPoxitionX = this.transform.position.x;
-        this.transform.position = new Vector2(Random.Range(startingPoxitionX - XMin, startingPoxitionX + XMax), this.transform.position.y);
+        //this.transform.position = new Vector2(Random.Range(startingPoxitionX - XMin, startingPoxitionX + XMax), this.transform.position.y);
     }
 
     // Update is called once per frame

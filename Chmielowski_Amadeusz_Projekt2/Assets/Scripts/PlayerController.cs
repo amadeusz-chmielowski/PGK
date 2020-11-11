@@ -238,19 +238,19 @@ public class PlayerController : MonoBehaviour
     {
         GameManager.instance.GiveMessageNotYet(false);
         Debug.Log(other.tag);
-        if (other.CompareTag("CoinEUR"))
+        if (other.CompareTag("CoinEUR") && this.CompareTag("Player"))
         {
             other.gameObject.SetActive(false);
             GameManager.instance.AddCoin(1);
 
         }
-        if (other.CompareTag("CoinGBP"))
+        if (other.CompareTag("CoinGBP") && this.CompareTag("Player"))
         {
             other.gameObject.SetActive(false);
             GameManager.instance.AddCoin(1);
 
         }
-        if (other.CompareTag("Finish"))
+        if (other.CompareTag("Finish") && this.CompareTag("Player"))
         {
             if (GameManager.instance.Number_of_keys_left == GameManager.instance.Number_of_keys)
             {
@@ -263,7 +263,7 @@ public class PlayerController : MonoBehaviour
 
 
         }
-        if (other.CompareTag("Enemy"))
+        if (other.CompareTag("Enemy") && this.CompareTag("Player"))
         {
             if (other.gameObject.transform.position.y + killOffset < this.transform.position.y)
             {
@@ -278,13 +278,13 @@ public class PlayerController : MonoBehaviour
             }
 
         }
-        if (other.CompareTag("Heart"))
+        if (other.CompareTag("Heart") && this.CompareTag("Player"))
         {
             other.gameObject.SetActive(false);
             GameManager.instance.AddLive();
 
         }
-        if (other.CompareTag("Box"))
+        if (other.CompareTag("Box") && this.CompareTag("Player"))
         {
             other.gameObject.SetActive(false);
             GameManager.instance.AddKey();
@@ -294,7 +294,7 @@ public class PlayerController : MonoBehaviour
 
     void OnTriggerStay2D(Collider2D other)
     {
-        if (other.CompareTag("Lift"))
+        if (other.CompareTag("Lift") && this.CompareTag("Player"))
         {
             m_body2d.isKinematic = true;
             transform.parent = other.transform;
@@ -303,7 +303,7 @@ public class PlayerController : MonoBehaviour
 
     void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("Lift"))
+        if (other.CompareTag("Lift") && this.CompareTag("Player"))
         {
             Unlock();
         }
