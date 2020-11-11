@@ -11,6 +11,7 @@ TagManager:
   - Heart
   - Box
   - Lift
+  - Fall
   layers:
   - Default
   - TransparentFX
